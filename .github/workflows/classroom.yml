@@ -1,0 +1,63 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Calculates base inventory
+      id: calculates-base-inventory
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Calculates base inventory
+        setup-command: ''
+        command: javac src/*.java && java -cp src Main
+        input: ''
+        expected-output: |-
+          Total Warehouse Value: $7750.0
+          Item found at index: 1
+        comparison-method: contains
+        timeout: 2
+        max-score: 33
+    - name: Dynamic Value Calculation
+      id: dynamic-value-calculation
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Dynamic Value Calculation
+        setup-command: sed -i 's/warehouse\[0\].quantity = 5;/warehouse\[0\].quantity
+          = 10;/' src/Main.java
+        command: javac src/*.java && java -cp src Main
+        input: ''
+        expected-output: 'Total Warehouse Value: $12750.0'
+        comparison-method: contains
+        timeout: 2
+        max-score: 33
+    - name: Handles non-existent item (-1)
+      id: handles-non-existent-item-1
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Handles non-existent item (-1)
+        setup-command: sed -i 's/String searchTarget = .*/String searchTarget = "Monitor";/'
+          src/Main.java
+        command: javac src/*.java && java -cp src Main
+        input: ''
+        expected-output: 'Item found at index: -1'
+        comparison-method: contains
+        timeout: 2
+        max-score: 34
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        CALCULATES-BASE-INVENTORY_RESULTS: "${{steps.calculates-base-inventory.outputs.result}}"
+        DYNAMIC-VALUE-CALCULATION_RESULTS: "${{steps.dynamic-value-calculation.outputs.result}}"
+        HANDLES-NON-EXISTENT-ITEM-1_RESULTS: "${{steps.handles-non-existent-item-1.outputs.result}}"
+      with:
+        runners: calculates-base-inventory,dynamic-value-calculation,handles-non-existent-item-1
